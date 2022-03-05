@@ -1,0 +1,121 @@
+#!/usr/bin/env bash
+# The original secure-time-sync.sh script was written by madaidan:
+# https://gitlab.com/madaidan/secure-time-sync
+
+#################
+### ARGUMENTS ###
+#################
+# Disable Tor mode by default. If enabled, the date and time will be set using onion domains and the systemd service file is written to start after Tor
+tor_mode=0
+
+# Check if the '--tor' flag was passed, enabling Tor mode
+for arg in "${@}"; do [[ "${arg}" == "--tor" ]] && echo "INFO: Tor mode enabled, the date and time will be obtained using an onion domain" && tor_mode=1 && break; done
+
+################
+### PROGRAMS ###
+################
+# Define the secure curl command, obtained from:
+# https://www.whonix.org/wiki/Secure_Downloads#Downloads_with_scurl_-_SSL_Command_Line_Downloader
+curl='/usr/bin/curl';
+
+# Define the 'date' command, used to set the time and date
+date='/usr/bin/date';
+
+# Define the 'shuf' command, used to randomly choose a URL below to obtain the time and date from
+shuf='/usr/bin/shuf';
+
+#################
+### FUNCTIONS ###
+#################
+function is_cmd() {
+    # Verify if the specified command executes successfully. If not, then display an error message to stdout and exit with an error
+    [[ -z "$(command -v ${1})" ]] && echo "ERROR: Unable to execute the command: ${1}" && exit 1;
+};
+
+function select_url() {
+    # Iterate through all pool within the $pool array, randomly shuffle these pool, and then choose the first one
+    url=$(for url in "${pool[@]}"; do echo "$url"; done | /usr/bin/shuf | head -n1);
+    # The echo command is used so that the output of this function can be stored
+    echo "${url}";
+};
+
+function date_and_time() {
+    # Argument 1: URL to use
+    url="${1}";
+    # Execute the curl command to obtain the header of the $url, and then grep (fixed string only) the line containing the time and date, and finally use sed to remove the specified string so that only the full timestamp from $url is left
+    date_and_time=$(${curl} --silent --head --url "${url}" | fgrep -i 'date:' | sed s/'[dD]ate: '//g);
+    # The echo command is used so that the output of this function can be stored
+    echo "${date_and_time}";
+};
+
+##############
+### VERIFY ###
+##############
+# Ensure that the $curl and $shuf commands execute properly
+is_cmd "${curl}";
+is_cmd "${date}";
+is_cmd "${shuf}";
+
+############
+### POOL ###
+############
+# Check if Tor mode is enabled
+if [ ${tor_mode} -eq 1 ]; then
+    # If so, then define an arry of onion URLs. Note that SSL for onion domains is not necessary, since they are encrypted by default
+    # DuckDuckGo; obtained by entering the following query into duckduckgo.com: 'duckduckgo onion'
+    pool[0]='https://duckduckgogg42xjoc72x3sjasowoarfbgcmvfimaftt6twagswzczad.onion';
+    # Freedom of the Press Foundation; address obtained from: https://community.torproject.org/onion-services
+    pool[1]='http://fpfjxcrmw437h6z2xl3w4czl55kvkmxpapg37bbopsafdu7q454byxid.onion';
+    # QubesOS; address obtained from: https://community.torproject.org/onion-services
+    pool[2]='http://qubesosfasa4zl44o4tws22di6kepyzfeqv3tg4e3ztknltfxqrymdad.onion';
+    # Tor Project main website; address obtained from: https://onion.torproject.org
+    pool[3]='http://2gzyxa5ihm7nsggfxnu52rck2vv4rvmdlkiu3zzui5du4xyclen53wid.onion';
+    # Whonix; address obtained from: https://www.whonix.org/wiki/Hosting_a_Mirror
+    pool[4]='http://dds6qkxpwdeubwucdiaord2xgbbeyds25rbsgr73tbfpqpt4a6vjwsyd.onion';
+    # Torsocks can be leaky (thank you madaidan and Seirdy), so use curl's proxy options instead to connect to onion domains
+    curl="${curl} --socks5-hostname localhost:9050";
+else
+    # Otherwise, define an array containing the clearnet version of each onion domain above, in the same order
+    pool[0]='https://duckduckgo.com';
+    #pool[1]='https://freedom.press';
+    pool[2]='https://www.qubes-os.org';
+    pool[3]='https://www.torproject.org';
+    pool[4]='https://www.whonix.org';
+    # If clearnet, then force HTTPS
+    curl="${curl} --tlsv1.3 --proto =https";
+fi;
+
+#############
+### FETCH ###
+#############
+# This variable will only be relevant if the selected URL or the user's network connection is unstable
+retry=0;
+
+# Set the maximum number of retries to perform if the timestamp cannot be obtained from the first selected url
+maximum_retries=10;
+
+# Randomly select a URL to use for obtaining the date and time
+url="$(select_url)";
+
+# Display the URL to stdout
+echo "INFO: The following domain will be used: '${url}'";
+
+# Start an infinite loop
+while true; do
+    # Obtain the date and time from one of the pool in the $pool array above
+    timestamp="$(date_and_time ${url})";
+    # If the timestamp above was defined, then break the loop
+    [[ ! -z "${timestamp}" ]] && break;
+    # Otherwise, if the date and time could not be obtained after $maximum_retries, then there's probably an issue with the network, so display an error message to user and break the loop
+    [[ ${retry} == ${maximum_retries} ]] && echo "ERROR: Unable to set time and date, please check network connectivity!" && exit 1;
+    # Increase the current $retry by one
+    retry=$(( ${retry} + 1 ));
+    # Display the current $retry to stdout
+    echo "WARN: Unable to obtain the date and time, retrying (${retry} of ${maximum_retries})";
+done;
+
+###########
+### SET ###
+###########
+# Set the date and time using the timestamp obtained from the URL header
+"${date}" -s "${timestamp}";
