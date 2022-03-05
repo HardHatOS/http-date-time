@@ -1,0 +1,2 @@
+# http-date-time
+Set the system date and time using HTTP headers instead of NTP, which is susceptible to: [Time Attacks](https://www.whonix.org/wiki/Time_Attacks) | [Time Attacks (Archive)](https://web.archive.org/web/20211117201245/https://www.whonix.org/wiki/Time_Attacks). This script is a rewrite of [madaidan](https://github.com/madaidan)'s original code: [Secure Time Synchronization](https://gitlab.com/madaidan/secure-time-sync).
