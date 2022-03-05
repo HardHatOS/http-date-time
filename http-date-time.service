@@ -1,0 +1,41 @@
+[Unit]
+After=network-online.target
+Conflicts=http-date-time-tor.service
+Conflicts=systemd-timedated.service
+Conflicts=systemd-timesyncd.service
+Description=set the date and time using HTTP headers
+Wants=network-online.target
+
+[Service]
+AmbientCapabilities=CAP_SYS_TIME
+CapabilityBoundingSet=CAP_SYS_TIME
+ExecStart=http-date-time
+Group=datetime
+LockPersonality=true
+MemoryDenyWriteExecute=true
+NoNewPrivileges=true
+PrivateDevices=true
+PrivateIPC=true
+PrivateTmp=true
+ProcSubset=pid
+ProtectControlGroups=true
+ProtectHome=true
+ProtectHostname=true
+ProtectKernelLogs=true
+ProtectKernelModules=true
+ProtectKernelTunables=true
+ProtectProc=invisible
+ProtectSystem=strict
+RestrictAddressFamilies=AF_INET AF_INET6
+RestrictNamespaces=true
+RestrictRealtime=true
+RestrictSUIDSGID=true
+SystemCallArchitectures=native
+SystemCallFilter=@clock @system-service
+SystemCallFilter=~@resources @obsolete
+Type=oneshot
+UMask=0077
+User=datetime
+
+[Install]
+WantedBy=multi-user.target
