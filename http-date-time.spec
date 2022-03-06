@@ -8,6 +8,8 @@ License:    AGPLv3
 URL:        https://github.com/HardHatOS/http-date-time
 Source0:    http-date-time
 Source1:    pool.txt
+Source2:    http-date-time.service
+Source3:    http-date-time-tor.service
 BuildArch:  noarch
 Requires:   curl, python3
 Recommends:	tor
@@ -19,6 +21,9 @@ Obtain the date and time from HTTP headers rather than NTP, which is unencrypted
 # RPM macro for the directory that will contain the pool.txt file of URLs to use
 %define _pooldir %{_sysconfdir}/http-date-time
 
+# RPM macro for the systemd directory where service files are located
+%define _servicedir %{_prefix}/lib/systemd/user
+
 %install
 # Copy the Python script into /usr/bin
 install -D -m 755 %{SOURCE0} -t %{buildroot}%{_bindir}
@@ -26,10 +31,23 @@ install -D -m 755 %{SOURCE0} -t %{buildroot}%{_bindir}
 # Copy the pool.txt file into the pool directory defined above
 install -D %{SOURCE1} -t %{buildroot}%{_pooldir}
 
+# Copy the systemd service files to the systemd service file directory
+install -D %{SOURCE2} -t %{buildroot}%{_servicedir}
+install -D %{SOURCE3} -t %{buildroot}%{_servicedir}
+
 %files
 %{_bindir}/http-date-time
 %{_pooldir}/pool.txt
+%{_servicedir}/http-date-time.service
+%{_servicedir}/http-date-time-tor.service
+
+%post
+# Create a new user 'datetime' that will be used to set the system date and time
+useradd --no-create-home --system --shell nologin datetime
 
 %postun
-# Remove the configuration file directory
+# Remove the configuration file directory in /etc
 %{__rm} -rf %{_pooldir}
+
+# Remove the 'datetime' user
+userdel --remove datetime
