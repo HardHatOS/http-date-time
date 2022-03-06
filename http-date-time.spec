@@ -10,6 +10,7 @@ Source0:    http-date-time
 Source1:    pool.txt
 BuildArch:  noarch
 Requires:   curl, python3
+Recommends:	tor
 
 %description
 Obtain the date and time from HTTP headers rather than NTP, which is unencrypted and susceptible to time attacks. By default, only non-Tor/clearnet URLs are used but Tor mode can be enabled to connect to only onion domains instead.
