@@ -17,7 +17,7 @@ Obtain the date and time from HTTP headers rather than NTP, which is unencrypted
 
 %pre
 # RPM macro for the directory that will contain the pool.txt file of URLs to use
-%define %{_pooldir} %{_sysconfdir}/http-date-time
+%define _pooldir %{_sysconfdir}/http-date-time
 
 %install
 # Copy the Python script into /usr/bin
