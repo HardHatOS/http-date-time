@@ -43,7 +43,7 @@ install -D %{SOURCE3} -t %{buildroot}%{_servicedir}
 
 %post
 # Create a new user 'datetime' that will be used to set the system date and time
-useradd --no-create-home --system --shell nologin datetime
+useradd --no-create-home --system --shell /usr/sbin/nologin datetime
 
 %postun
 # Remove the configuration file directory in /etc
