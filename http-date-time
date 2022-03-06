@@ -1,121 +1,177 @@
-#!/usr/bin/env bash
-# The original secure-time-sync.sh script was written by madaidan:
-# https://gitlab.com/madaidan/secure-time-sync
-
-#################
-### ARGUMENTS ###
-#################
-# Disable Tor mode by default. If enabled, the date and time will be set using onion domains and the systemd service file is written to start after Tor
-tor_mode=0
-
-# Check if the '--tor' flag was passed, enabling Tor mode
-for arg in "${@}"; do [[ "${arg}" == "--tor" ]] && echo "INFO: Tor mode enabled, the date and time will be obtained using an onion domain" && tor_mode=1 && break; done
+#!/usr/bin/env python3
+from pathlib import Path
+from random import choice
+from ssl import create_default_context
+from subprocess import run
+from sys import argv
+from urllib.error import URLError
+from urllib.request import build_opener,install_opener,ProxyHandler,urlopen
 
 ################
-### PROGRAMS ###
+### MESSAGES ###
 ################
-# Define the secure curl command, obtained from:
-# https://www.whonix.org/wiki/Secure_Downloads#Downloads_with_scurl_-_SSL_Command_Line_Downloader
-curl='/usr/bin/curl';
+def error(msg = False):
+    # If a $msg was specified, then display it to stdout
+    if msg: print(f"!-- ERROR: {msg}")
+    # Exit with error 1
+    exit(1)
 
-# Define the 'date' command, used to set the time and date
-date='/usr/bin/date';
+def info(msg):
+    # Display an informational message to stdout
+    print(f"!-- INFO: {msg}")
 
-# Define the 'shuf' command, used to randomly choose a URL below to obtain the time and date from
-shuf='/usr/bin/shuf';
+def warn(msg):
+    # Display a warning message to stdout
+    print(f"!-- WARN: {msg}")
 
 #################
 ### FUNCTIONS ###
 #################
-function is_cmd() {
-    # Verify if the specified command executes successfully. If not, then display an error message to stdout and exit with an error
-    [[ -z "$(command -v ${1})" ]] && echo "ERROR: Unable to execute the command: ${1}" && exit 1;
-};
+def args(name):
+    # Iterate through all arguments
+    for arg in argv:
+        # If the current $arg matches the specified $name, then return bool True
+        if arg == name: return(True)
+    # Otherwise, return bool False
+    return(False)
 
-function select_url() {
-    # Iterate through all pool within the $pool array, randomly shuffle these pool, and then choose the first one
-    url=$(for url in "${pool[@]}"; do echo "$url"; done | /usr/bin/shuf | head -n1);
-    # The echo command is used so that the output of this function can be stored
-    echo "${url}";
-};
+class sources:
+    def clearnet():
+        # Define the pool in which to randomly choose a clearnet URL
+        pool = (
+                'https://duckduckgo.com',
+                'https://www.qubes-os.org',
+                'https://www.torproject.org',
+                'https://www.whonix.org'
+                )
+        # Return the $pool tuple
+        return(pool)
 
-function date_and_time() {
-    # Argument 1: URL to use
-    url="${1}";
-    # Execute the curl command to obtain the header of the $url, and then grep (fixed string only) the line containing the time and date, and finally use sed to remove the specified string so that only the full timestamp from $url is left
-    date_and_time=$(${curl} --silent --head --url "${url}" | fgrep -i 'date:' | sed s/'[dD]ate: '//g);
-    # The echo command is used so that the output of this function can be stored
-    echo "${date_and_time}";
-};
+    def tor():
+        # Define the pool in which to randomly choose an onion URL
+        # Sources:
+        #   1) DuckDuckGo; obtained by entering the following query into duckduckgo.com: 'duckduckgo onion'
+        #   2) Freedom of the Press Foundation; address obtained from: https://community.torproject.org/onion-services
+        #   3) QubesOS; address obtained from: https://community.torproject.org/onion-services
+        #   4) Tor Project main website; address obtained from: https://onion.torproject.org
+        #   5) Whonix; address obtained from: https://www.whonix.org/wiki/Hosting_a_Mirror
+        pool = (
+                'https://duckduckgogg42xjoc72x3sjasowoarfbgcmvfimaftt6twagswzczad.onion',
+                'http://fpfjxcrmw437h6z2xl3w4czl55kvkmxpapg37bbopsafdu7q454byxid.onion',
+                'http://qubesosfasa4zl44o4tws22di6kepyzfeqv3tg4e3ztknltfxqrymdad.onion',
+                'http://2gzyxa5ihm7nsggfxnu52rck2vv4rvmdlkiu3zzui5du4xyclen53wid.onion',
+                'http://dds6qkxpwdeubwucdiaord2xgbbeyds25rbsgr73tbfpqpt4a6vjwsyd.onion'
+                )
+        # Return the $pool tuple
+        return(pool)
 
-##############
-### VERIFY ###
-##############
-# Ensure that the $curl and $shuf commands execute properly
-is_cmd "${curl}";
-is_cmd "${date}";
-is_cmd "${shuf}";
+def ssl():
+    # Define Python's default SSL context
+    context = create_default_context()
+    # [DISABLED] Enforce the same TLS version for the minimum as the maximum. For now this causes issues with the URLs, so use the default
+    #context.minimum_version = context.maximum_version
+    # Return the SSL context
+    return(context)
+
+def http_headers(stdout):
+    # Define a dictionary that will contain each HTTP header name as the key and their values
+    headers = {}
+    # Iterate through each entry within the $stdout list
+    for header in stdout:
+        # Split the current $header entry via the first semicolon so that index 0 is the header name and index 1 is the value
+        s = [entry.strip() for entry in header.split(':', 1)]
+        try:
+            # Add the HTTP header name (as lowercase) and its value to the $headers dictionary
+            headers[s[0].lower()] = s[1]
+        except IndexError:
+            # If the above command fails, then continue to the next $header within the list. Note that not all entries within $stdout are HTTP headers
+            continue
+    # Return the $headers dictionary
+    return(headers)
+
+def fetch(pool, tor_mode, retry = 0, max_retry = 10):
+    # Randomly choose a URL from the $pool
+    url = choice(pool)
+    # Display the selected $url to stdout
+    info(f"Setting the date and time using the following source: {url}")
+    # Check if Tor mode is enabled
+    if tor_mode is True:
+        # Enable the following options if Tor mode is enabled:
+        # '--socks5-hostname localhost:9050': Use the given SOCKS5 proxy, which is localhost at port 9050 (Tor)
+        options = ['--socks5-hostname', 'localhost:9050']
+    else:
+        # Otherwise use the following options when connecting to clearnet URLs:
+        # '--tlsv1.3': Use TLS v1.3
+        # '--proto =https': Only use HTTPS
+        options = ['--tlsv1.3', '--proto', '=https']
+    # Define the full command to execute using the $options defined above as well as the following other options:
+    # '--head': Fetch the HTTP headers only
+    # '--silent': Don't show any error messages to stdout
+    cmd = ['curl', '--head', '--silent'] + options + ['--url', url]
+    # Execute the `curl` command and capture all output, including both stderr and stdout
+    request = run(cmd, capture_output = True)
+    # Check if the return code was anything but 0, meaning an issue occured
+    if request.returncode != 0:
+        # Default to an empty error message
+        stderr = ''
+        # If there is an error message, then define a string for stdout
+        if request.stderr: stderr = f": {request.stderr.decode()}"
+        # Display the return code and $stderr, if applicable, to stdout
+        error(f"Return code {request.returncode}{stderr}")
+    # Check if `curl` did not return any output
+    if not request.stdout:
+        # If the number of retries is at the maximum, then display an error message to stdout and exit 1
+        if retry == max_retry: error(f"Unable to connect to the randomly chosen URLs within the following pool. Please check your connection and try again.\n\n{pool}\n")
+        # Display the current number of retries
+        info(f"Retry {retry + 1} of {max_retry}")
+        # If the request failed, then call this function again while increasing the $retry counter by 1 
+        return(fetch(pool, tor_mode, retry = retry + 1))
+    # Create a list of all HTTP headers from `request.stdout`
+    stdout = [entry.strip() for entry in request.stdout.decode().split('\n')]
+    # Parse $stdout and return a dictionary of each header and their value
+    headers = http_headers(stdout)
+    try:
+        # Obtain the date and time from the $headers dictionary
+        date = headers['date']
+    except KeyError:
+        # If the date was not part of the HTTP header from the current $url, then remove it from the $pool
+        pool = [source for source in pool if (not source == url)]
+        # Display a warning message to stdout
+        warn('Unable to extract the date from the HTTP headers of the current source\n')
+        # If the $pool is now empty then the date could not be obtained from any of the HTTP headers of any URL within the original $pool, so display an error message to stdout and exit
+        if not pool: error('Unable to extract the date from the HTTP headers of all sources')
+        # Otherwise, call this function again with the new $pool
+        return(fetch(pool, tor_mode))
+    # Return the $date
+    return(date)
+
+def system(date):
+    # Set the date and time for the system. Any errors will be shown to stdout so `capture_output` is not needed 
+    run(['date', f"--set={date}"])
 
 ############
-### POOL ###
+### MAIN ###
 ############
-# Check if Tor mode is enabled
-if [ ${tor_mode} -eq 1 ]; then
-    # If so, then define an arry of onion URLs. Note that SSL for onion domains is not necessary, since they are encrypted by default
-    # DuckDuckGo; obtained by entering the following query into duckduckgo.com: 'duckduckgo onion'
-    pool[0]='https://duckduckgogg42xjoc72x3sjasowoarfbgcmvfimaftt6twagswzczad.onion';
-    # Freedom of the Press Foundation; address obtained from: https://community.torproject.org/onion-services
-    pool[1]='http://fpfjxcrmw437h6z2xl3w4czl55kvkmxpapg37bbopsafdu7q454byxid.onion';
-    # QubesOS; address obtained from: https://community.torproject.org/onion-services
-    pool[2]='http://qubesosfasa4zl44o4tws22di6kepyzfeqv3tg4e3ztknltfxqrymdad.onion';
-    # Tor Project main website; address obtained from: https://onion.torproject.org
-    pool[3]='http://2gzyxa5ihm7nsggfxnu52rck2vv4rvmdlkiu3zzui5du4xyclen53wid.onion';
-    # Whonix; address obtained from: https://www.whonix.org/wiki/Hosting_a_Mirror
-    pool[4]='http://dds6qkxpwdeubwucdiaord2xgbbeyds25rbsgr73tbfpqpt4a6vjwsyd.onion';
-    # Torsocks can be leaky (thank you madaidan and Seirdy), so use curl's proxy options instead to connect to onion domains
-    curl="${curl} --socks5-hostname localhost:9050";
-else
-    # Otherwise, define an array containing the clearnet version of each onion domain above, in the same order
-    pool[0]='https://duckduckgo.com';
-    #pool[1]='https://freedom.press';
-    pool[2]='https://www.qubes-os.org';
-    pool[3]='https://www.torproject.org';
-    pool[4]='https://www.whonix.org';
-    # If clearnet, then force HTTPS
-    curl="${curl} --tlsv1.3 --proto =https";
-fi;
+def main():
+    # Tor mode; check if the Tor flag was passed which makes the script use onion domains
+    tor_mode = args('--tor')
+    # Display whether Tor mode is enabled or not to stdout
+    info(f"Use Tor: {tor_mode}")
+    # Check if $tor_mode is enabled
+    if tor_mode is True:
+        # If so, then obtain the $pool containing the onion URLs
+        pool = sources.tor()
+    else:
+        # Otherwise if $tor_mode is bool False then use clearnet URLs
+        pool = sources.clearnet()
+    # Fetch the HTTP headers using a randomly selected URL from $pool
+    date = fetch(pool, tor_mode)
+    # Set the date and time on the system
+    system(date)
 
 #############
-### FETCH ###
+### START ###
 #############
-# This variable will only be relevant if the selected URL or the user's network connection is unstable
-retry=0;
-
-# Set the maximum number of retries to perform if the timestamp cannot be obtained from the first selected url
-maximum_retries=10;
-
-# Randomly select a URL to use for obtaining the date and time
-url="$(select_url)";
-
-# Display the URL to stdout
-echo "INFO: The following domain will be used: '${url}'";
-
-# Start an infinite loop
-while true; do
-    # Obtain the date and time from one of the pool in the $pool array above
-    timestamp="$(date_and_time ${url})";
-    # If the timestamp above was defined, then break the loop
-    [[ ! -z "${timestamp}" ]] && break;
-    # Otherwise, if the date and time could not be obtained after $maximum_retries, then there's probably an issue with the network, so display an error message to user and break the loop
-    [[ ${retry} == ${maximum_retries} ]] && echo "ERROR: Unable to set time and date, please check network connectivity!" && exit 1;
-    # Increase the current $retry by one
-    retry=$(( ${retry} + 1 ));
-    # Display the current $retry to stdout
-    echo "WARN: Unable to obtain the date and time, retrying (${retry} of ${maximum_retries})";
-done;
-
-###########
-### SET ###
-###########
-# Set the date and time using the timestamp obtained from the URL header
-"${date}" -s "${timestamp}";
+if __name__ == '__main__':
+    # Start the main function
+    main()
