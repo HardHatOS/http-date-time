@@ -7,6 +7,25 @@ from sys import argv
 from urllib.error import URLError
 from urllib.request import build_opener,install_opener,ProxyHandler,urlopen
 
+#############
+### USAGE ###
+#############
+def usage():
+    name = Path(__file__).name
+    print(f"NAME\n\t{name} - set the date and time using HTTP headers\n")
+    print(f"SYNPOSIS\n\t{name} [OPTIONS]\n")
+    print(f"DESCRIPTION\n\t{name} obtains the date and time from HTTP headers rather than NTP, which is unencrypted and susceptible to time attacks. By default, only non-Tor/clearnet URLs are used but Tor mode can be enabled to connect to only onion domains instead.\n")
+    print(f"OPTIONS")
+    print("\t--help\t\t\tShow this message")
+    print("\t--pool [filename]\tSpecify a custom text file containing the sources to use")
+    print("\t--tor\t\t\tEnable Tor mode")
+    print("\nEXAMPLES")
+    print(f"\t1) {name}")
+    print(f"\t2) {name} --pool /usr/local/etc/http-date-time/pool.txt")
+    print(f"\t3) {name} --tor")
+    print(f"\t4) {name} --pool /usr/local/etc/http-date-time/pool.txt --tor")
+    print("\n")
+
 ################
 ### MESSAGES ###
 ################
@@ -27,43 +46,61 @@ def warn(msg):
 #################
 ### FUNCTIONS ###
 #################
-def args(name):
+def args():
+    #
+    if flags('--help'):
+        usage()
+        exit(0)
+    # Tor mode; check if the Tor flag was passed which makes the script use onion domains
+    tor_mode = flags('--tor')
+    # Sources (Optional); check of the user has specified a text file that contains the pool of URLs to use
+    pool_txt = flags('--pool', get_value = True)
+    # If the user has not specified a text file containing the pool of sources, then default to '/etc/http-date-time/pool.txt'
+    if pool_txt is False: pool_txt = Path('/etc', 'http-date-time', 'pool.txt')
+    # Return the arguments
+    return(tor_mode, pool_txt)
+
+def flags(name, get_value = False):
     # Iterate through all arguments
-    for arg in argv:
-        # If the current $arg matches the specified $name, then return bool True
-        if arg == name: return(True)
-    # Otherwise, return bool False
+    for i in range(len(argv)):
+        # Define the current argument
+        arg = argv[i]
+        # Check if the current $arg matches the specified $name
+        if arg == name:
+            # If there is no value for $arg then return bool True
+            if get_value is False: return(True)
+            try:
+                # Return the value of $arg, which should be the next argument in the $argv list
+                return(argv[i + 1])
+            except IndexError:
+                # If there is no value for $arg, then display a warning to stdout
+                warn(f"Unable to obtain the value for: '{name}'")
+                # Return bool False
+                return(False)
+    # If $name was not found in list $argv, return bool False
     return(False)
 
-class sources:
-    def clearnet():
-        # Define the pool in which to randomly choose a clearnet URL
-        pool = (
-                'https://duckduckgo.com',
-                'https://www.qubes-os.org',
-                'https://www.torproject.org',
-                'https://www.whonix.org'
-                )
-        # Return the $pool tuple
-        return(pool)
-
-    def tor():
-        # Define the pool in which to randomly choose an onion URL
-        # Sources:
-        #   1) DuckDuckGo; obtained by entering the following query into duckduckgo.com: 'duckduckgo onion'
-        #   2) Freedom of the Press Foundation; address obtained from: https://community.torproject.org/onion-services
-        #   3) QubesOS; address obtained from: https://community.torproject.org/onion-services
-        #   4) Tor Project main website; address obtained from: https://onion.torproject.org
-        #   5) Whonix; address obtained from: https://www.whonix.org/wiki/Hosting_a_Mirror
-        pool = (
-                'https://duckduckgogg42xjoc72x3sjasowoarfbgcmvfimaftt6twagswzczad.onion',
-                'http://fpfjxcrmw437h6z2xl3w4czl55kvkmxpapg37bbopsafdu7q454byxid.onion',
-                'http://qubesosfasa4zl44o4tws22di6kepyzfeqv3tg4e3ztknltfxqrymdad.onion',
-                'http://2gzyxa5ihm7nsggfxnu52rck2vv4rvmdlkiu3zzui5du4xyclen53wid.onion',
-                'http://dds6qkxpwdeubwucdiaord2xgbbeyds25rbsgr73tbfpqpt4a6vjwsyd.onion'
-                )
-        # Return the $pool tuple
-        return(pool)
+def read(tor_mode, pool_txt):
+    # If the $pool_txt is not a valid file, then display an error message to stdout and exit 1
+    if not Path(pool_txt).is_file(): error(f"Unable to locate the file: '{pool_txt}'")
+    # Display whether Tor mode is enabled or not to stdout
+    info(f"Tor mode: {tor_mode}")
+    # Open $pool_txt and obtain its contents
+    with open(pool_txt, 'r') as f: contents = f.readlines()
+    # Keep only lines that are non-empty and remove extraneous whitespace from each line
+    contents = [line.strip() for line in contents if line.strip()]
+    # Keep only lines that do not start with '#'; in other words, remove all comments
+    contents = [line for line in contents if not line.startswith('#')]
+    # Define the pool to be all URLs that do not start with the specified string; this creates a pool of clearnet URLs
+    pool = [line for line in contents if not line.startswith('tor:')]
+    # Check if Tor mode is enabled
+    if tor_mode is True:
+        # If so, then define the pool to be all URLs within $contents that are not within $pool. This obtains the Tor onion URLs
+        pool = set(pool).symmetric_difference(set(contents))
+        # Remove the string at the beginning of each Tor URL
+        pool = [url.split(':', 1)[1] for url in pool]
+    # Return the $pool
+    return(pool)
 
 def ssl():
     # Define Python's default SSL context
@@ -72,22 +109,6 @@ def ssl():
     #context.minimum_version = context.maximum_version
     # Return the SSL context
     return(context)
-
-def http_headers(stdout):
-    # Define a dictionary that will contain each HTTP header name as the key and their values
-    headers = {}
-    # Iterate through each entry within the $stdout list
-    for header in stdout:
-        # Split the current $header entry via the first semicolon so that index 0 is the header name and index 1 is the value
-        s = [entry.strip() for entry in header.split(':', 1)]
-        try:
-            # Add the HTTP header name (as lowercase) and its value to the $headers dictionary
-            headers[s[0].lower()] = s[1]
-        except IndexError:
-            # If the above command fails, then continue to the next $header within the list. Note that not all entries within $stdout are HTTP headers
-            continue
-    # Return the $headers dictionary
-    return(headers)
 
 def fetch(pool, tor_mode, retry = 0, max_retry = 10):
     # Randomly choose a URL from the $pool
@@ -110,7 +131,7 @@ def fetch(pool, tor_mode, retry = 0, max_retry = 10):
     cmd = ['curl', '--head', '--silent'] + options + ['--url', url]
     # Execute the `curl` command and capture all output, including both stderr and stdout
     request = run(cmd, capture_output = True)
-    # Check if the return code was anything but 0, meaning an issue occured
+    # Check if the return code was anything but 0, meaning an issue occurred
     if request.returncode != 0:
         # Default to an empty error message
         stderr = ''
@@ -128,6 +149,26 @@ def fetch(pool, tor_mode, retry = 0, max_retry = 10):
         return(fetch(pool, tor_mode, retry = retry + 1))
     # Create a list of all HTTP headers from `request.stdout`
     stdout = [entry.strip() for entry in request.stdout.decode().split('\n')]
+    # Return $stdout
+    return(stdout)
+
+def http_headers(stdout):
+    # Define a dictionary that will contain each HTTP header name as the key and their values
+    headers = {}
+    # Iterate through each entry within the $stdout list
+    for header in stdout:
+        # Split the current $header entry via the first semicolon so that index 0 is the header name and index 1 is the value
+        s = [entry.strip() for entry in header.split(':', 1)]
+        try:
+            # Add the HTTP header name (as lowercase) and its value to the $headers dictionary
+            headers[s[0].lower()] = s[1]
+        except IndexError:
+            # If the above command fails, then continue to the next $header within the list. Note that not all entries within $stdout are HTTP headers
+            continue
+    # Return the $headers dictionary
+    return(headers)
+
+def parse(stdout):
     # Parse $stdout and return a dictionary of each header and their value
     headers = http_headers(stdout)
     try:
@@ -152,20 +193,13 @@ def system(date):
 ############
 ### MAIN ###
 ############
-def main():
-    # Tor mode; check if the Tor flag was passed which makes the script use onion domains
-    tor_mode = args('--tor')
-    # Display whether Tor mode is enabled or not to stdout
-    info(f"Use Tor: {tor_mode}")
-    # Check if $tor_mode is enabled
-    if tor_mode is True:
-        # If so, then obtain the $pool containing the onion URLs
-        pool = sources.tor()
-    else:
-        # Otherwise if $tor_mode is bool False then use clearnet URLs
-        pool = sources.clearnet()
-    # Fetch the HTTP headers using a randomly selected URL from $pool
-    date = fetch(pool, tor_mode)
+def main(tor_mode, pool_txt):
+    # Read the $pool_txt file and obtain the pool of URLs to use
+    pool = read(tor_mode, pool_txt)
+    # Fetch the HTTP headers using `curl` and a randomly selected URL from $pool
+    stdout = fetch(pool, tor_mode)
+    # Parse the output from the `curl` command used above to obtain the current date and time
+    date = parse(stdout)
     # Set the date and time on the system
     system(date)
 
@@ -173,5 +207,7 @@ def main():
 ### START ###
 #############
 if __name__ == '__main__':
+    # User-defined arguments
+    [tor_mode, pool_txt] = args()
     # Start the main function
-    main()
+    main(tor_mode, pool_txt)
