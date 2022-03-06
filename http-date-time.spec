@@ -22,18 +22,18 @@ Obtain the date and time from HTTP headers rather than NTP, which is unencrypted
 %define _pooldir %{_sysconfdir}/http-date-time
 
 # RPM macro for the systemd directory where service files are located
-%define _servicedir %{_prefix}/lib/systemd/user
+%define _servicedir %{_prefix}/lib/systemd/system
 
 %install
 # Copy the Python script into /usr/bin
-install -D -m 755 %{SOURCE0} -t %{buildroot}%{_bindir}
+install -D %{SOURCE0} -t %{buildroot}%{_bindir}
 
 # Copy the pool.txt file into the pool directory defined above
-install -D %{SOURCE1} -t %{buildroot}%{_pooldir}
+install -D -m 0644 %{SOURCE1} -t %{buildroot}%{_pooldir}
 
 # Copy the systemd service files to the systemd service file directory
-install -D %{SOURCE2} -t %{buildroot}%{_servicedir}
-install -D %{SOURCE3} -t %{buildroot}%{_servicedir}
+install -D -m 0644 %{SOURCE2} -t %{buildroot}%{_servicedir}
+install -D -m 0644 %{SOURCE3} -t %{buildroot}%{_servicedir}
 
 %files
 %{_bindir}/http-date-time
