@@ -21,13 +21,13 @@ Obtain the date and time from HTTP headers rather than NTP, which is unencrypted
 
 %install
 # Copy the Python script into /usr/bin
-install -D -m 755 %{SOURCE0} %{buildroot}%{_bindir}
+install -D -m 755 %{SOURCE0} -t %{buildroot}%{_bindir}
 
 # Copy the pool.txt file into the pool directory defined above
-install -D %{SOURCE1} %{buildroot}%{_pooldir}
+install -D %{SOURCE1} -t %{buildroot}%{_pooldir}
 
 %files
-${_bindir}/http-date-time
+%{_bindir}/http-date-time
 %{_pooldir}/pool.txt
 
 %postun
