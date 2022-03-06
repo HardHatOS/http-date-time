@@ -1,0 +1,36 @@
+# This file specifies the pool of URLs the date and time will be obtained from. The syntax is as follows:
+#   1. Comment lines start with '#'
+#   2. There is one URL per line
+#   3. Lines specifying Tor URLs start with the string 'tor:'; eg. 'tor:http://oniondomainxyz.onion'
+#   4. All non-Tor/clearnet URLs must support TLS
+
+################
+### CLEARNET ###
+################
+https://duckduckgo.com
+https://www.qubes-os.org
+https://www.torproject.org
+https://www.whonix.org
+
+###########
+### TOR ###
+###########
+# DuckDuckGo
+# From entering the following query into duckduckgo.com: 'duckduckgo onion'
+tor:https://duckduckgogg42xjoc72x3sjasowoarfbgcmvfimaftt6twagswzczad.onion
+
+# Freedom of the Press Foundation
+# From: https://community.torproject.org/onion-services
+tor:http://fpfjxcrmw437h6z2xl3w4czl55kvkmxpapg37bbopsafdu7q454byxid.onion
+
+# QubesOS
+# From: https://community.torproject.org/onion-services
+tor:http://qubesosfasa4zl44o4tws22di6kepyzfeqv3tg4e3ztknltfxqrymdad.onion
+
+# Tor Project main website
+# From: https://onion.torproject.org
+tor:http://2gzyxa5ihm7nsggfxnu52rck2vv4rvmdlkiu3zzui5du4xyclen53wid.onion
+
+# Whonix
+# From: https://www.whonix.org/wiki/Hosting_a_Mirror
+tor:http://dds6qkxpwdeubwucdiaord2xgbbeyds25rbsgr73tbfpqpt4a6vjwsyd.onion
