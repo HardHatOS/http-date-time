@@ -44,7 +44,7 @@ install -D -m 0644 %{SOURCE4} -t %{buildroot}%{_mandir}/man8
 %{_pooldir}/pool.txt
 %{_servicedir}/http-date-time.service
 %{_servicedir}/http-date-time-tor.service
-%{_mandir}/man8/http-date-time.8
+%{_mandir}/man8/http-date-time.8.*
 
 %post
 # Create a new user 'datetime' that will be used to set the system date and time
