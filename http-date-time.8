@@ -1,0 +1,54 @@
+.TH  "http-date-time" "8"
+
+.SH "NAME"
+
+http-date-time \- set the date and time using HTTP headers
+
+.SH "SYNOPSIS"
+
+http-date-time
+.I [OPTION]
+
+.SH "DESCRIPTION"
+
+Obtain the date and time from HTTP headers rather than NTP, which is susceptible to time attacks. By default, only non-Tor/clearnet URLs are used but Tor mode can be enabled to connect to only onion domains instead.
+
+.SH "AUTOSTART"
+
+To set the system date and time on system startup, run one of the following commands as the root user:
+
+.IP "# systemctl enable http-date-time"
+Set the system date and time using the default options
+
+.IP "# systemctl enable http-date-time-tor"
+Set the system date and time using onion domains
+
+.PP
+The systemd services above will set the date and time using the
+.I datetime
+user. It's recommended to use http-date-time in this manner rather than executing the command manually.
+
+.SH "OPTIONS"
+
+.B "--pool"
+Specify the full path to a text file containing the sources to use. See /etc/http-date-time/pool.txt for the format to use
+
+.B "--tor"
+Enable Tor mode where the date and time are only obtained from onion domains rather than clearnet
+
+.SH EXAMPLES
+
+.IP "# http-date-time"
+Use the default pool of sources and do not enable Tor mode
+
+.IP "# http-date-time --pool /usr/local/etc/http-date-time/pool.txt"
+Specify a custom sources file and do not enable Tor mode
+
+.IP "# http-date-time --tor"
+Enable Tor mode to obtain the date and time from the default pool of onion domains
+
+.IP "# http-date-time --pool /usr/local/etc/http-date-time/pool.txt --tor"
+Enable Tor mode to obtain the date and time from the specified pool of onion domains
+
+.SH AUTHOR
+Hard Hat OS (https://github.com/HardHatOS/http-date-time)
