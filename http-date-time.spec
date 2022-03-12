@@ -10,6 +10,7 @@ Source0:    http-date-time
 Source1:    pool.txt
 Source2:    http-date-time.service
 Source3:    http-date-time-tor.service
+Source4:    http-date-time.8
 BuildArch:  noarch
 Requires:   curl, python3
 Recommends: tor
@@ -35,11 +36,15 @@ install -D -m 0644 %{SOURCE1} -t %{buildroot}%{_pooldir}
 install -D -m 0644 %{SOURCE2} -t %{buildroot}%{_servicedir}
 install -D -m 0644 %{SOURCE3} -t %{buildroot}%{_servicedir}
 
+# Copy the man page to the section 8 man page directory
+install -D -m 0644 %{SOURCE4} -t %{buildroot}%{_mandir}/man8
+
 %files
 %{_bindir}/http-date-time
 %{_pooldir}/pool.txt
 %{_servicedir}/http-date-time.service
 %{_servicedir}/http-date-time-tor.service
+%{_mandir}/man8/http-date-time.8
 
 %post
 # Create a new user 'datetime' that will be used to set the system date and time
