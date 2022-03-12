@@ -12,19 +12,8 @@ from urllib.request import build_opener,install_opener,ProxyHandler,urlopen
 #############
 def usage():
     name = Path(__file__).name
-    print(f"NAME\n\t{name} - set the date and time using HTTP headers\n")
-    print(f"SYNPOSIS\n\t{name} [OPTIONS]\n")
-    print(f"DESCRIPTION\n\t{name} obtains the date and time from HTTP headers rather than NTP, which is unencrypted and susceptible to time attacks. By default, only non-Tor/clearnet URLs are used but Tor mode can be enabled to connect to only onion domains instead.\n")
-    print(f"OPTIONS")
-    print("\t--help\t\t\tShow this message")
-    print("\t--pool [filename]\tSpecify a custom text file containing the sources to use")
-    print("\t--tor\t\t\tEnable Tor mode")
-    print("\nEXAMPLES")
-    print(f"\t1) {name}")
-    print(f"\t2) {name} --pool /usr/local/etc/http-date-time/pool.txt")
-    print(f"\t3) {name} --tor")
-    print(f"\t4) {name} --pool /usr/local/etc/http-date-time/pool.txt --tor")
-    print("\n")
+    print(f"{name.upper()}")
+    print(f"\tThe man page provides the help and usage information. View it using the command: `man 8 {name}`")
 
 ################
 ### MESSAGES ###
