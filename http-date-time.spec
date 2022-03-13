@@ -47,6 +47,8 @@ Obtain the date and time from HTTP headers rather than NTP, which is unencrypted
 %{_pooldir}/pool.txt
 %{_servicedir}/http-date-time.service
 %{_servicedir}/http-date-time-tor.service
+%{_servicedir}/http-date-time.timer
+%{_servicedir}/http-date-time-tor.timer
 %{_mandir}/man8/http-date-time.8.*
 
 %post
