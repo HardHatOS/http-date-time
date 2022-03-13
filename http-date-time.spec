@@ -1,19 +1,18 @@
-Name:       http-date-time
-Version:    1.0
-Release:    1%{?dist}
-Summary:    Set the date and time using HTTP headers
-
-Group:      System Environment/Base
-License:    AGPLv3
-URL:        https://github.com/HardHatOS/http-date-time
-Source0:    http-date-time
-Source1:    pool.txt
-Source2:    http-date-time.service
-Source3:    http-date-time-tor.service
-Source4:    http-date-time.8
-BuildArch:  noarch
-Requires:   curl, python3
+BuildArch: noarch
+Group: System Environment/Base
+License: AGPLv3
+Name: http-date-time
 Recommends: tor
+Release: 1%{?dist}
+Requires: curl, python3
+Source0: http-date-time
+Source1: pool.txt
+Source2: http-date-time.service
+Source3: http-date-time-tor.service
+Source4: http-date-time.8
+Summary: Set the date and time using HTTP headers
+URL: https://github.com/HardHatOS/http-date-time
+Version: 1.0
 
 %description
 Obtain the date and time from HTTP headers rather than NTP, which is unencrypted and susceptible to time attacks. By default, only non-Tor/clearnet URLs are used but Tor mode can be enabled to connect to only onion domains instead.
@@ -27,17 +26,17 @@ Obtain the date and time from HTTP headers rather than NTP, which is unencrypted
 
 %install
 # Copy the Python script into /usr/bin
-install -D %{SOURCE0} -t %{buildroot}%{_bindir}
+%{__install} -D %{SOURCE0} -t %{buildroot}%{_bindir}
 
 # Copy the pool.txt file into the pool directory defined above
-install -D -m 0644 %{SOURCE1} -t %{buildroot}%{_pooldir}
+%{__install} -D -m 0644 %{SOURCE1} -t %{buildroot}%{_pooldir}
 
 # Copy the systemd service files to the systemd service file directory
-install -D -m 0644 %{SOURCE2} -t %{buildroot}%{_servicedir}
-install -D -m 0644 %{SOURCE3} -t %{buildroot}%{_servicedir}
+%{__install} -D -m 0644 %{SOURCE2} -t %{buildroot}%{_servicedir}
+%{__install} -D -m 0644 %{SOURCE3} -t %{buildroot}%{_servicedir}
 
 # Copy the man page to the section 8 man page directory
-install -D -m 0644 %{SOURCE4} -t %{buildroot}%{_mandir}/man8
+%{__install} -D -m 0644 %{SOURCE4} -t %{buildroot}%{_mandir}/man8
 
 %files
 %{_bindir}/http-date-time
