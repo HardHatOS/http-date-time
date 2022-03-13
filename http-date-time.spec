@@ -60,4 +60,4 @@ useradd --no-create-home --system --shell /usr/sbin/nologin datetime
 %{__rm} -rf %{_pooldir}
 
 # Remove the 'datetime' user
-userdel --remove datetime
+userdel datetime
