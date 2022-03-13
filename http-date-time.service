@@ -3,7 +3,7 @@ After=network-online.target
 Conflicts=http-date-time-tor.service
 Conflicts=systemd-timedated.service
 Conflicts=systemd-timesyncd.service
-Description=set the date and time using HTTP headers
+Description=Obtain and set the date and time from HTTP headers
 Wants=network-online.target
 
 [Service]

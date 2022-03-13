@@ -3,7 +3,7 @@ After=tor.service
 Conflicts=http-date-time.service
 Conflicts=systemd-timedated.service
 Conflicts=systemd-timesyncd.service
-Description=set the date and time using HTTP headers (Tor)
+Description=Obtain and set the date and time from onion HTTP headers
 Wants=network-online.service
 
 [Service]

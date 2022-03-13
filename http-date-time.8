@@ -17,11 +17,11 @@ Obtain the date and time from HTTP headers rather than NTP, which is susceptible
 
 To set the system date and time on system startup, run one of the following commands as the root user:
 
-.IP "# systemctl enable http-date-time"
-Set the system date and time using the default options
+.IP "# systemctl enable http-date-time.timer"
+Set the system date and time using the default options; runs every 30 minutes
 
-.IP "# systemctl enable http-date-time-tor"
-Set the system date and time using onion domains
+.IP "# systemctl enable http-date-time-tor.timer"
+Set the system date and time using onion domains; runs every 30 minutes
 
 .PP
 The systemd services above will set the date and time using the
