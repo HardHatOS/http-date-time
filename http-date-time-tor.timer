@@ -2,8 +2,10 @@
 Description=Obtain and set the date and time from onion HTTP headers every 30 minutes
 
 [Timer]
+OnActiveSec=1s
+OnBootSec=30s
 OnCalendar=*:0/30
-Persistent=true
+Persistent=True
 
 [Install]
 WantedBy=timers.target
