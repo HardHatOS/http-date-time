@@ -1,5 +1,4 @@
 BuildArch: noarch
-Group: System Environment/Base
 License: AGPLv3
 Name: http-date-time
 Recommends: tor
