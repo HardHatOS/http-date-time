@@ -41,15 +41,6 @@ Obtain the date and time from HTTP headers rather than NTP, which is unencrypted
 # Copy the man page to the section 8 man page directory
 %{__install} -D -m 0644 %{SOURCE6} -t %{buildroot}%{_mandir}/man8
 
-%files
-%{_bindir}/http-date-time
-%{_pooldir}/pool.txt
-%{_servicedir}/http-date-time.service
-%{_servicedir}/http-date-time-tor.service
-%{_servicedir}/http-date-time.timer
-%{_servicedir}/http-date-time-tor.timer
-%{_mandir}/man8/http-date-time.8.*
-
 %post
 # Create a new user 'datetime' that will be used to set the system date and time
 useradd --no-create-home --system --shell /usr/sbin/nologin datetime
@@ -60,3 +51,14 @@ useradd --no-create-home --system --shell /usr/sbin/nologin datetime
 
 # Remove the 'datetime' user
 userdel datetime
+
+%files
+%{_bindir}/http-date-time
+%{_pooldir}/pool.txt
+%{_servicedir}/http-date-time.service
+%{_servicedir}/http-date-time-tor.service
+%{_servicedir}/http-date-time.timer
+%{_servicedir}/http-date-time-tor.timer
+%{_mandir}/man8/http-date-time.8.*
+
+
